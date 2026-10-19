@@ -1,0 +1,18 @@
+export const state = {
+  dashboardData: { Kanlaon: [], Mayon: [], Taal: [] },
+  currentVolcano: 'Mayon',
+  currentTimeRange: 'daily',
+  currentParameter: 'all',
+  currentPeriodIndex: 0,
+  currentRadius: 6,
+  allDepEdSchools: [],
+  map: null,
+  markersLayer: null,
+  zoneCircle: null,
+  schoolMarkers: null,
+  centerMarkers: null,
+  trendChart: null,
+  radarChart: null,
+  kanlaonSnapshotUrl: null,
+  kanlaonLastCheckTime: 0,
+};

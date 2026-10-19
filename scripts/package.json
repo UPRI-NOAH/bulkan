@@ -1,0 +1,12 @@
+{
+  "name": "bulkan-scripts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "sync": "node sync-sheets.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
