@@ -12,13 +12,13 @@ const COLUMN_INDICES_DEFAULT = {
 };
 
 const COLUMN_INDICES_KANLAON = {
-  DATE: 1, AlertLevel: 0, VEQ: 2, VolcanicTremors: null,
-  Rockfall: null, PDCEvents: null, SO2Flux: 6, PlumeHeight: 7,
+  DATE: 2, AlertLevel: 1, VEQ: 3, VolcanicTremors: null,
+  Rockfall: null, PDCEvents: null, SO2Flux: 7, PlumeHeight: 8,
 };
 
 const VOLCANO_SOURCES = {
   kanlaon: {
-    sheetId: '18TGh3YbQEKVoX9Htk9MtOoB6RnuPwiisvbXVMpLM1WA',
+    sheetId: '1WJImbfbuHfn7YqitoCFrHEIm1eSLvXtOvTTx49C8cw8',
     tab: 'Sheet1',
     columns: COLUMN_INDICES_KANLAON,
   },
