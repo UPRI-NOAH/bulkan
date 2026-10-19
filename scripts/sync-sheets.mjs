@@ -23,12 +23,12 @@ const VOLCANO_SOURCES = {
     columns: COLUMN_INDICES_KANLAON,
   },
   mayon: {
-    sheetId: '1OHHgo043us1oTq_5gg8r8aKo2h3EbQQVjHnoVpV4WYM',
+    sheetId: '1nQOK3UgNOcYA1ywNl6OHR5vNNcK92Ff4',
     tab: 'Mayon',
     columns: COLUMN_INDICES_DEFAULT,
   },
   taal: {
-    sheetId: '1OHHgo043us1oTq_5gg8r8aKo2h3EbQQVjHnoVpV4WYM',
+    sheetId: '1nQOK3UgNOcYA1ywNl6OHR5vNNcK92Ff4',
     tab: 'Taal',
     columns: COLUMN_INDICES_DEFAULT,
   },
