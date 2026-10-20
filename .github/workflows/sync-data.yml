@@ -2,7 +2,7 @@ name: Sync Sheets Data
 
 on:
   schedule:
-    - cron: '0 20 * * *'  # 04:00 PH time (UTC+8) every day
+    - cron: '0 1 * * *'  # 09:00 PH time (UTC+8) — ~30 min after upstream sheet refresh at 08:30 PH
   workflow_dispatch: {}
 
 permissions:
