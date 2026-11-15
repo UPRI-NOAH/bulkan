@@ -1,6 +1,6 @@
 {
   "volcano": "taal",
-  "syncedAt": "2026-11-14T01:09:03.425Z",
+  "syncedAt": "2026-11-15T01:00:20.077Z",
   "records": [
     {
       "DATE": "2020-01-12",
@@ -29922,6 +29922,18 @@
       "DATE": "2026-11-13",
       "AlertLevel": 1,
       "VEQ": 9,
+      "VolcanicTremors": 0,
+      "Rockfall": "",
+      "PDCEvents": "",
+      "SO2Flux": 484,
+      "PlumeHeight": "",
+      "STALTA": "",
+      "eruption": 0
+    },
+    {
+      "DATE": "2026-11-14",
+      "AlertLevel": 1,
+      "VEQ": 17,
       "VolcanicTremors": 0,
       "Rockfall": "",
       "PDCEvents": "",
