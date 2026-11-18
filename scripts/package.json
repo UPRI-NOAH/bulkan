@@ -6,6 +6,7 @@
   "scripts": {
     "sync": "node sync-sheets.mjs",
     "ash": "node build-ash-deposits.mjs",
+    "hazard": "node build-hazard-zones.mjs",
     "validate": "node validate-data.mjs"
   },
   "engines": {

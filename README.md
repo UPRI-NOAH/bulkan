@@ -2,7 +2,7 @@
 
 https://lebcstr.github.io/bulkan/
 
-Static dashboard that shows PHIVOLCS-style monitoring data (VEQ, Rockfall, PDC, SO₂, Plume), risk-zone maps with DepEd schools and evacuation centers, and a small chat helper.
+Static dashboard that shows PHIVOLCS-style monitoring data (VEQ, Rockfall, PDC, SO₂, Plume), hazard zone maps (Lahar, PDC, Lava Flow) with the DepEd schools inside them, and a small chat helper.
 
 ## Layout
 
@@ -12,26 +12,31 @@ Static dashboard that shows PHIVOLCS-style monitoring data (VEQ, Rockfall, PDC, 
 │   ├── index.html         shell (CDN libs + CSS + module entry)
 │   ├── css/styles.css
 │   ├── js/
-│   │   ├── config.js            static constants (sources, zones, thresholds, feeds, news)
+│   │   ├── config.js            static constants (volcanoes, hazard layers, thresholds, feeds, news)
 │   │   ├── state.js             shared mutable runtime state
 │   │   ├── data.js              loads snapshot JSON from ./data/*.json
 │   │   ├── schools.js           DepEd schools loader + distance queries
 │   │   ├── charts.js            trend chart + radar chart (Chart.js)
-│   │   ├── map.js               Leaflet map + risk zones + markers
+│   │   ├── map.js               Risk Zones base map + volcano markers
 │   │   ├── ash-deposit.js       Ash3d deposit map + schools per thickness band
+│   │   ├── hazard-zones.js      Lahar / PDC / Lava Flow overlays on the risk zone map
+│   │   ├── school-risk.js       schools inside the switched-on hazard zones (list + markers)
+│   │   ├── leaflet-tiles.js     removes white lines between map tiles (both maps)
 │   │   ├── dashboard.js         top-level render (tabs, params)
 │   │   ├── kanlaon-snapshot.js  Kanlaon camera feed + news panel
 │   │   ├── lahar-chat.js        floating chat widget
-│   │   ├── affected-locations.js  static alert-school / evac-center data
 │   │   └── main.js              entry point — wires DOMContentLoaded
 │   └── data/
 │       ├── deped_schools.json           (43,502 schools)
 │       ├── kanlaon.json / mayon.json / taal.json   (produced by scripts)
 │       ├── ash_deposits.json + ash/*.geojson       (produced by scripts)
+│       ├── hazard_zones.json + hazard/*.geojson    (produced by scripts)
 ├── scripts/
 │   ├── sync-sheets.mjs    Node 20 script: Google Sheets API → JSON
 │   ├── build-ash-deposits.mjs  Ash3d shapefiles (Google Drive) → GeoJSON
-│   ├── google-auth.mjs    service-account token for both scripts
+│   ├── build-hazard-zones.mjs  hazard zone shapefiles (Google Drive) → GeoJSON
+│   ├── drive.mjs / shapefile.mjs  Drive listing and shapefile reading for both builders
+│   ├── google-auth.mjs    service-account token for all scripts
 │   ├── validate-data.mjs  sanity checks run before snapshots are committed
 │   └── package.json
 ├── tests/
@@ -56,7 +61,7 @@ python3 -m http.server 8082
 
 ## Refresh data manually
 
-Both scripts need the service account's JSON key in `GDRIVE_SA_KEY` (see [Google access](#google-access)). Run them from `scripts/`, where `package.json` lives.
+The scripts need the service account's JSON key in `GDRIVE_SA_KEY` (see [Google access](#google-access)). Run them from `scripts/`, where `package.json` lives.
 
 ```bash
 cd scripts
@@ -99,7 +104,7 @@ npx playwright install chromium
 node smoke.mjs
 ```
 
-Validation covers the three volcano snapshots only. A failed ash build shows as a failed step in the sync log and keeps the last published models.
+Validation covers the three volcano snapshots only. A failed ash or hazard zone build shows as a failed step in the sync log and keeps the last published models and zones.
 
 The monitor checks GitHub Pages by default. If the site moves, set the `SITE_URL` repository variable (**Settings → Secrets and variables → Actions → Variables**) to the new address, without a trailing slash.
 
@@ -111,13 +116,7 @@ The **Ash Deposit Model** panel shows Ash3d final deposit thickness isopachs and
 
 ### Publishing a new model
 
-Upload the Ash3d deposit shapefile to the volcano's Google Drive folder, as the downloaded `.zip`, a subfolder with the `depothik.*` files, or the `depothik.*` files directly:
-
-| Volcano | Drive folder ID |
-|---|---|
-| Kanlaon | `1S_QKDfhzlo2fQkKH_gh7GMRJ_rL0j5IB` |
-| Mayon   | `1GLK0Cz4tbzTE2sSLnRyrDMhUpTciFG80` |
-| Taal    | `1pXxMZ_yP0mPqmAypCwRTey-O69YmWyad` |
+Upload the Ash3d deposit shapefile to the volcano's Google Drive folder, as the downloaded `.zip`, a subfolder with the `depothik.*` files, or the `depothik.*` files directly
 
 The daily **Sync Sheets Data** workflow (09:00 PH time) picks it up and redeploys. To publish immediately, run that workflow from the Actions tab.
 
@@ -140,6 +139,53 @@ node build-ash-deposits.mjs --local <dir>
 # writes frontend/data/ash/*.geojson and frontend/data/ash_deposits.json
 ```
 
+## Hazard zones (Lahar, PDC, Lava Flow)
+
+The **Risk Zones** panel shows only these hazard maps. The **Hazard zones** toggles above the map switch Lahar, PDC and Lava Flow on and off; each hazard's zones (e.g. Lahar High) can then be hidden or shown individually from the map legend. Toggles stay set when you change volcano; a hazard with no map for the current volcano is greyed out.
+
+The **School Risk Assessment** lists the DepEd schools inside the zones that are on, one section per zone, with a coverage chip per zone that filters the list. A school inside nested zones of one hazard is listed under the most severe of them. Its marker color is its worst status across the zones it is in, set by `status` in `HAZARD_LAYERS` (`frontend/js/config.js`).
+
+| Hazard | Zones (most to least severe) |
+|---|---|
+| Lahar | high, medium, low |
+| PDC | haz, buffer |
+| Lava Flow | high, low; or a single haz zone for an ungraded map (Mayon) |
+
+### Publishing zones
+
+Each volcano has one Drive folder, inside the shared **Hazard Zones** folder, with a `Lahar`, `PDC` (or `Pyroclastic Flow`) and `Lava Flow` subfolder. Other subfolders are ignored, and a volcano without any of them simply has no hazard map.
+
+Upload one polygon shapefile per zone into its hazard's subfolder, as a `.zip` or as the loose files (`.shp` and `.prj` are required). The **file name must contain the zone**, e.g. `KV_Lahar_High.zip`, `PDC_Buffer.zip`, `KV_LF_Low.zip`; `hazard` is accepted for `haz`, and `moderate` for `medium`. Attribute columns aren't used.
+
+- Shapefiles must be in **Web Mercator** (the ArcGIS default) or **WGS84 lon/lat**. Anything else (e.g. UTM 51N) fails the build with a message naming the file; reproject it first.
+- Outlines are simplified to about 5 m so the page stays light.
+- Re-uploading a zone replaces it: if two files name the same zone, the newer one is used and the log says so.
+
+Zones change rarely, so they are **not** rebuilt by the daily sync. After uploading, rebuild them locally and commit the output through a pull request; merging it to `main` redeploys the site:
+
+```bash
+cd scripts
+GDRIVE_SA_KEY="$(cat path/to/key.json)" npm run hazard
+# or from a local folder laid out as <dir>/Kanlaon/{Lahar,PDC,Lava Flow}/:
+node build-hazard-zones.mjs --local <dir>
+# writes frontend/data/hazard/*.geojson and frontend/data/hazard_zones.json
+```
+
+Check the log for skipped files and `git diff --stat frontend/data/hazard` before committing. If Drive can't be read the script stops without touching the published files.
+
+To add another volcano, create the same folder layout, share it with the service account, and add its ID to `DRIVE_FOLDERS` in `scripts/build-hazard-zones.mjs` and to the table above. Colors and labels are in `HAZARD_LAYERS` in `frontend/js/config.js`.
+
+## Map tile lines
+
+Both maps (Risk Zones and the ash deposit map) import `frontend/js/leaflet-tiles.js`, which removes thin white lines that otherwise run along the edges of the OpenStreetMap tiles.
+
+- **When the lines appear:** only when the screen or browser zoom is not a whole-number scale, such as 125% or 150% (common on Windows laptops). They don't appear at 100% or on Retina screens.
+- **Why:** at those scales tile edges fall between screen pixels. Leaflet 1.9 draws tiles with `mix-blend-mode: plus-lighter`, which adds together the colours of tiles sharing an edge pixel, so light areas turn white. Where tiles fall short of each other, a gap shows instead.
+- **Fix:** each tile is drawn 1px larger so neighbours overlap, with normal blending so the top tile covers the one under it. Both parts are needed: with the overlap alone, the overlapping strip turns white.
+- **Scope:** it changes only how map tiles are created. Hazard zones, ash contours, markers and legends are drawn separately and aren't affected.
+
+It works by wrapping Leaflet's internal `GridLayer._initTile`, not a documented option. That is safe while `index.html` pins Leaflet 1.9.4. After upgrading Leaflet, check the maps at 125% browser zoom (Cmd/Ctrl +) and remove the file if the new version fixes the lines itself.
+
 ## Data sources
 
 Volcano records come from the automated monitoring Google Sheets, read with the Sheets API v4 as the service account. The sheets stay private; they only need to be shared (Viewer) with the service account.
@@ -154,9 +200,9 @@ To change a source or a column, edit `VOLCANO_SOURCES` / `COLUMN_INDICES_*` in `
 
 ## Google access
 
-Both scripts authenticate as one Google Cloud service account. Its JSON key is the repository secret `GDRIVE_SA_KEY`, and the same value is used locally.
+All scripts authenticate as one Google Cloud service account. Its JSON key is the repository secret `GDRIVE_SA_KEY`, and the same value is used locally.
 
-- **Sharing:** share each sheet and each Ash3d Drive folder with the service account's `client_email` (Viewer).
+- **Sharing:** share each sheet and each Ash3d and hazard zone Drive folder with the service account's `client_email` (Viewer).
 - **APIs:** the **Google Sheets API** and **Google Drive API** must both be enabled in the service account's project.
 - **Native Sheets only:** an uploaded `.xlsx` can't be read by the Sheets API; convert it with *File → Save as Google Sheets*.
 - **Cost:** both APIs are free; usage (a few requests a day) is far below quota.

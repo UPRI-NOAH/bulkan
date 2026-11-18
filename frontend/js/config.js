@@ -22,12 +22,6 @@ export const VOLCANO_META = {
   },
 };
 
-export const ZONES = {
-  6: { pop: 7186, area: 113.1, radius: 6000, color: '#44cc66', kmToSafeZone: 8 },
-  8: { pop: 38088, area: 201.1, radius: 8000, color: '#ffc62a', kmToSafeZone: 10 },
-  10: { pop: 184376, area: 314.2, radius: 10000, color: '#ff4444', kmToSafeZone: 15 },
-};
-
 export const THRESHOLDS = {
   VEQ: { normal: 50, elevated: 100, high: 200, critical: 300 },
   Rockfall: { normal: 100, elevated: 200, high: 300, critical: 500 },
@@ -83,3 +77,35 @@ export const SCHOOLS_URL = './data/deped_schools.json';
 // USGS Ash3d deposit models per volcano, newest first. Produced daily from the
 // Google Drive folders by scripts/build-ash-deposits.mjs.
 export const ASH_DEPOSIT_MANIFEST_URL = './data/ash_deposits.json';
+
+// Hazard zone maps per volcano, from scripts/build-hazard-zones.mjs. Each
+// hazard has its own hue; zones run from most to least severe, and the zone
+// keys match the manifest's. `status` is the school risk status for a school
+// inside the zone (see School Risk Assessment).
+export const HAZARD_ZONES_MANIFEST_URL = './data/hazard_zones.json';
+export const HAZARD_LAYERS = {
+  lahar: {
+    label: 'Lahar',
+    zones: {
+      high: { label: 'High hazard', color: '#1e40af', status: 'Critical' },
+      medium: { label: 'Medium hazard', color: '#3b82f6', status: 'Priority' },
+      low: { label: 'Low hazard', color: '#93c5fd', status: 'Moderate' },
+    },
+  },
+  pdc: {
+    label: 'PDC',
+    zones: {
+      haz: { label: 'Hazard zone', color: '#7e22ce', status: 'Critical' },
+      buffer: { label: 'Buffer zone', color: '#c084fc', dashArray: '6 4', status: 'Priority' },
+    },
+  },
+  lava: {
+    label: 'Lava Flow',
+    zones: {
+      // Ungraded lava flow hazard zone (Mayon); Kanlaon's map is graded high/low.
+      haz: { label: 'Hazard zone', color: '#b91c1c', status: 'Critical' },
+      high: { label: 'High hazard', color: '#b91c1c', status: 'Critical' },
+      low: { label: 'Low hazard', color: '#f97316', status: 'Moderate' },
+    },
+  },
+};

@@ -9,11 +9,12 @@
 // Auth: GDRIVE_SA_KEY = the service account's JSON key (folders shared with it).
 // Local testing: `node build-ash-deposits.mjs --local <dir>` reads
 // <dir>/<Volcano>/ instead of Drive.
-import { readFile, writeFile, readdir, mkdir, rm, stat } from 'node:fs/promises';
-import { inflateRawSync } from 'node:zlib';
+import { writeFile, mkdir, rm } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { getAccessToken } from './google-auth.mjs';
+import { driveSource, localSource } from './drive.mjs';
+import { ext, stem, unzip, readDbf, readShp as readShapes } from './shapefile.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = join(__dirname, '..', 'frontend', 'data');
@@ -27,149 +28,20 @@ const DRIVE_FOLDERS = {
 };
 
 const DEPOSIT_VAR = 'Final Deposit Thickness';
-const FOLDER_MIME = 'application/vnd.google-apps.folder';
-const DRIVE_API = 'https://www.googleapis.com/drive/v3/files';
 
-// ── Google Drive ────────────────────────────────────────────────────────────
-
-function driveSource(token) {
-  const get = async (url) => {
-    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-    if (!res.ok) throw new Error(`Drive ${url.split('?')[0]}: HTTP ${res.status} ${await res.text()}`);
-    return res;
-  };
-  return {
-    async list(folderId) {
-      const files = [];
-      let pageToken = '';
-      do {
-        const params = new URLSearchParams({
-          q: `'${folderId}' in parents and trashed = false`,
-          fields: 'nextPageToken, files(id, name, mimeType, createdTime, modifiedTime)',
-          pageSize: '1000',
-          supportsAllDrives: 'true',
-          includeItemsFromAllDrives: 'true',
-        });
-        if (pageToken) params.set('pageToken', pageToken);
-        const page = await (await get(`${DRIVE_API}?${params}`)).json();
-        files.push(...page.files.map(f => ({ ...f, isFolder: f.mimeType === FOLDER_MIME })));
-        pageToken = page.nextPageToken;
-      } while (pageToken);
-      return files;
-    },
-    async download(file) {
-      return Buffer.from(await (await get(`${DRIVE_API}/${file.id}?alt=media&supportsAllDrives=true`)).arrayBuffer());
-    },
-  };
-}
-
-// Same interface as driveSource, backed by a local directory tree.
-function localSource() {
-  return {
-    async list(dir) {
-      const entries = await readdir(dir, { withFileTypes: true });
-      return Promise.all(entries.filter(e => !e.name.startsWith('.')).map(async e => {
-        const s = await stat(join(dir, e.name));
-        return {
-          id: join(dir, e.name),
-          name: e.name,
-          isFolder: e.isDirectory(),
-          createdTime: s.birthtime.toISOString(),
-          modifiedTime: s.mtime.toISOString(),
-        };
-      }));
-    },
-    download: file => readFile(file.id),
-  };
-}
-
-// ── Shapefile parsing ───────────────────────────────────────────────────────
-
-function unzip(buf) {
-  let eocd = buf.length - 22;
-  while (eocd >= 0 && buf.readUInt32LE(eocd) !== 0x06054b50) eocd--;
-  if (eocd < 0) throw new Error('not a zip file');
-  const count = buf.readUInt16LE(eocd + 10);
-  let p = buf.readUInt32LE(eocd + 16);
-  const files = {};
-  for (let i = 0; i < count; i++) {
-    const method = buf.readUInt16LE(p + 10);
-    const size = buf.readUInt32LE(p + 20);
-    const nameLen = buf.readUInt16LE(p + 28);
-    const extraLen = buf.readUInt16LE(p + 30);
-    const commentLen = buf.readUInt16LE(p + 32);
-    const local = buf.readUInt32LE(p + 42);
-    const name = buf.toString('utf8', p + 46, p + 46 + nameLen);
-    const start = local + 30 + buf.readUInt16LE(local + 26) + buf.readUInt16LE(local + 28);
-    const data = buf.subarray(start, start + size);
-    files[name] = { data: method === 8 ? inflateRawSync(data) : data, mtime: dosTime(buf, p + 12) };
-    p += 46 + nameLen + extraLen + commentLen;
-  }
-  return files;
-}
-
-// Zip entries store an MS-DOS local timestamp; treated as UTC.
-function dosTime(buf, at) {
-  const t = buf.readUInt16LE(at);
-  const d = buf.readUInt16LE(at + 2);
-  return new Date(Date.UTC(1980 + (d >> 9), ((d >> 5) & 15) - 1, d & 31, t >> 11, (t >> 5) & 63, (t & 31) * 2)).toISOString();
-}
-
-function readDbf(buf) {
-  const nrec = buf.readUInt32LE(4);
-  const hlen = buf.readUInt16LE(8);
-  const rlen = buf.readUInt16LE(10);
-  const fields = [];
-  for (let p = 32; buf[p] !== 0x0d; p += 32) {
-    fields.push({
-      name: buf.toString('latin1', p, p + 11).replace(/\0.*$/, ''),
-      type: String.fromCharCode(buf[p + 11]),
-      len: buf[p + 16],
-    });
-  }
-  const rows = [];
-  for (let i = 0; i < nrec; i++) {
-    let off = hlen + i * rlen + 1;
-    const row = {};
-    for (const f of fields) {
-      const raw = buf.toString('latin1', off, off + f.len).trim();
-      off += f.len;
-      row[f.name] = 'NF'.includes(f.type) && raw !== '' ? Number(raw) : raw;
-    }
-    rows.push(row);
-  }
-  return rows;
-}
-
+// Ash3d isopachs are PolyLines in lon/lat.
 function readShp(buf) {
-  const geoms = [];
-  for (let p = 100; p < buf.length;) {
-    const len = buf.readInt32BE(p + 4) * 2;
-    const body = buf.subarray(p + 8, p + 8 + len);
-    p += 8 + len;
-    const type = body.readInt32LE(0);
-    if (type === 0) { geoms.push(null); continue; }
-    if (![3, 13, 23].includes(type)) throw new Error(`shape type ${type} is not a PolyLine`);
-    const nparts = body.readInt32LE(36);
-    const npts = body.readInt32LE(40);
-    const starts = Array.from({ length: nparts }, (_, i) => body.readInt32LE(44 + 4 * i)).concat(npts);
-    const p0 = 44 + 4 * nparts;
-    const pts = Array.from({ length: npts }, (_, i) => [
-      +body.readDoubleLE(p0 + 16 * i).toFixed(6),
-      +body.readDoubleLE(p0 + 16 * i + 8).toFixed(6),
-    ]);
-    const lines = starts.slice(0, -1).map((s, i) => pts.slice(s, starts[i + 1]));
-    geoms.push(lines.length === 1
+  return readShapes(buf).map(rec => {
+    if (!rec) return null;
+    if (rec.kind !== 'line') throw new Error('shape type is not a PolyLine');
+    const lines = rec.parts.map(part => part.map(([x, y]) => [+x.toFixed(6), +y.toFixed(6)]));
+    return lines.length === 1
       ? { type: 'LineString', coordinates: lines[0] }
-      : { type: 'MultiLineString', coordinates: lines });
-  }
-  return geoms;
+      : { type: 'MultiLineString', coordinates: lines };
+  });
 }
 
 // ── Collecting shapefiles from a volcano folder ─────────────────────────────
-
-const ext = name => name.slice(name.lastIndexOf('.') + 1).toLowerCase();
-const stem = name => name.slice(0, name.lastIndexOf('.')).toLowerCase();
 
 // Pairs each .shp with its .dbf. Re-uploading depothik.* into the same folder
 // gives duplicate names, so pick the .dbf uploaded closest in time.

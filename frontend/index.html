@@ -150,48 +150,24 @@
     <div class="panel-body risk-zones-body">
       <!-- LEFT: MAP SECTION -->
       <div>
-        <div class="zone-btns">
-          <button class="zone-btn active" onclick="selectZone(event, 6)">6 KM</button>
-          <button class="zone-btn" onclick="selectZone(event, 8)">8 KM</button>
-          <button class="zone-btn" onclick="selectZone(event, 10)">10 KM</button>
+        <div class="map-layer-bar">
+          <div class="ash-toggle-group">
+            <span class="ash-toggle-label">Hazard zones</span>
+            <div class="ash-toggle hazard-toggle" id="hazard-toggles" role="group" aria-label="Hazard zone layers"></div>
+          </div>
         </div>
         <div id="map"></div>
       </div>
 
-      <!-- RIGHT: TITLE + STACKED BOXES (School Above, Evacuation Below) -->
+      <!-- RIGHT: SCHOOLS INSIDE THE HAZARD ZONES SWITCHED ON -->
       <div class="risk-side">
-        <!-- MAIN TITLE -->
         <div style="padding: 0.5rem 0.8rem; border-bottom: 2px solid rgba(255,107,53,0.4); margin-bottom: 0.2rem; flex-shrink: 0;">
           <div style="font-size: 12px; font-weight: 800; color: #ff6b35; text-transform: uppercase; letter-spacing: 0.6px;">
-            ⚠️ Risk Assessment
+            Risk Assessment
           </div>
         </div>
-        
+
         <div id="risk-zone-school-box" class="risk-box"></div>
-        <div id="risk-zone-evac-box" class="risk-box"></div>
-      </div>
-    </div>
-    
-    <!-- ZONE STATISTICS - With Ample Space -->
-    <div class="zone-stats">
-      <div style="font-size:11px;font-weight:600;color:#ff6b35;margin-bottom:0.5rem;text-transform:uppercase;letter-spacing:0.5px">📊 Zone Statistics</div>
-      <div class="zone-stat-grid">
-        <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:1rem;text-align:center">
-          <div style="font-size:9px;color:var(--text2);text-transform:uppercase;margin-bottom:0.5rem">Population</div>
-          <div style="font-size:18px;font-weight:700;color:var(--accent)" id="population-value">-</div>
-        </div>
-        <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:1rem;text-align:center">
-          <div style="font-size:9px;color:var(--text2);text-transform:uppercase;margin-bottom:0.5rem">Zone Area</div>
-          <div style="font-size:18px;font-weight:700;color:var(--accent)" id="zone-area">-</div>
-        </div>
-        <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:1rem;text-align:center">
-          <div style="font-size:9px;color:var(--text2);text-transform:uppercase;margin-bottom:0.5rem">Current Radius</div>
-          <div style="font-size:18px;font-weight:700;color:var(--accent)" id="current-radius">6</div>
-        </div>
-        <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:1rem;text-align:center">
-          <div style="font-size:9px;color:var(--text2);text-transform:uppercase;margin-bottom:0.5rem">Km to Safe Zone</div>
-          <div style="font-size:18px;font-weight:700;color:var(--accent)" id="km-safe-zone">-</div>
-        </div>
       </div>
     </div>
   </div>
