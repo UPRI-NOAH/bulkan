@@ -2,9 +2,10 @@ import { state } from './state.js';
 import { VOLCANO_META } from './config.js';
 import { STALTA_THRESHOLD } from './charts.js';
 import { updateTrendChart, updateRadarChart, updateNavigationButtons } from './charts.js';
-import { updateMapMarkers, selectZone } from './map.js';
+import { updateMapMarkers } from './map.js';
 import { updateLiveFeeds } from './kanlaon-snapshot.js';
 import { updateAshDeposit } from './ash-deposit.js';
+import { updateHazardZones } from './hazard-zones.js';
 
 export function render() {
   renderTabs();
@@ -105,7 +106,7 @@ export function selectVol(vol) {
   if (state.map) {
     const cfg = VOLCANO_META[vol];
     state.map.setView(cfg.coords, cfg.zoomLevel);
-    selectZone(null, 6);
+    updateHazardZones();
   }
   updateLiveFeeds();
   updateAshDeposit();

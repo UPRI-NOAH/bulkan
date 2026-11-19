@@ -1,6 +1,7 @@
 import { state } from './state.js';
 import { VOLCANO_META, ASH_DEPOSIT_MANIFEST_URL } from './config.js';
 import { calculateDistance } from './schools.js';
+import './leaflet-tiles.js';
 
 // Sequential ramp, thinnest to thickest. Spread over however many isopachs a
 // model has (Ash3d exports range from 7 levels to 10+), so every level is distinct.

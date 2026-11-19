@@ -229,11 +229,24 @@ button.ash-band-chip:disabled{opacity:0.45;cursor:default}
 .last-update{padding:0 2rem 0.5rem;max-width:1600px;margin:0 auto;font-size:10px;color:var(--text3);text-align:right}
 .risk-zones-container{padding:0 2rem 2rem;max-width:1600px;margin:0 auto}
 .risk-zones-body{display:grid;grid-template-columns:1fr 280px;gap:1.5rem;align-items:start}
-.zone-btns{display:grid;grid-template-columns:repeat(3,1fr);gap:0.5rem;margin-bottom:1rem}
+.risk-coverage-chips{flex-shrink:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0.3rem;margin-bottom:0.6rem}
+.risk-coverage-chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}
+.risk-school-section{margin-bottom:0.5rem;padding-bottom:0.5rem;border-bottom:1px solid rgba(255,107,53,0.2)}
+.risk-school-section:last-child{border-bottom:none}
+.risk-school-section-title{display:flex;align-items:center;gap:0.4rem;font-size:9px;font-weight:700;color:var(--text);text-transform:uppercase;margin:0.5rem 0 0.3rem}
+.risk-school-item{padding:0.35rem 0.45rem;background:var(--bg);border-left:3px solid;border-radius:4px;margin-bottom:0.3rem;font-size:11px;cursor:pointer}
+.risk-school-item:hover{background:var(--surface2)}
+.map-layer-bar{display:flex;flex-wrap:wrap;gap:0.75rem 1.5rem;margin-bottom:1rem}
+.hazard-toggle button{display:inline-flex;align-items:center;gap:0.4rem}
+.hazard-swatch{width:9px;height:9px;border-radius:2px;border:1px solid rgba(255,255,255,0.6);display:inline-block}
+.hazard-legend-group{font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.4px;margin-top:0.4rem}
+.hazard-legend-zone{width:calc(100% + 0.6rem);background:none;border:none;padding:0.15rem 0.3rem;margin:0 -0.3rem 0.15rem;border-radius:3px;color:var(--text);font:inherit;text-align:left;white-space:nowrap;cursor:pointer}
+.hazard-legend-zone:hover{background:var(--surface2)}
+.hazard-legend-zone.off{opacity:0.45}
+.hazard-legend-zone.off span:last-child{text-decoration:line-through}
+.hazard-legend-swatch{width:14px;height:10px;border:1.5px solid;border-radius:2px;display:inline-block;box-sizing:border-box}
 .risk-side{display:flex;flex-direction:column;gap:0.8rem;height:100%;min-height:0;max-height:750px;overflow:hidden}
 .risk-box{flex:1;min-height:0;display:flex;flex-direction:column}
-.zone-stats{border-top:2px solid var(--border);padding:1rem 1.5rem;margin-top:0}
-.zone-stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;padding:0 0.5rem}
 .trends-header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem}
 .trends-controls{display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap}
 .trends-range{display:flex;gap:0.5rem;flex-wrap:wrap}
@@ -463,9 +476,6 @@ button.ash-band-chip:disabled{opacity:0.45;cursor:default}
 
 .loading{color:var(--text2);text-align:center;padding:2rem}
 .error{background:rgba(255,68,68,0.1);border:1px solid rgba(255,68,68,0.25);color:#ff4444;padding:1rem;border-radius:6px;margin-bottom:1rem}
-.zone-btn{padding:0.5rem;background:var(--surface2);border:1px solid var(--border);color:var(--text);cursor:pointer;border-radius:4px;font-size:10px;font-weight:600;transition:all 0.3s}
-.zone-btn:hover{border-color:var(--accent)}
-.zone-btn.active{background:var(--accent);border-color:var(--accent);color:white}
 .time-range-tabs{display:flex;gap:0.5rem;margin-bottom:1.5rem;flex-wrap:wrap;justify-content:center}
 .time-tab{padding:0.75rem 1.5rem;background:var(--surface2);border:1px solid var(--border);color:var(--text);cursor:pointer;border-radius:4px;font-size:11px;font-weight:600;transition:all 0.3s;text-transform:uppercase;letter-spacing:0.5px}
 .time-tab:hover{border-color:var(--accent)}
@@ -738,8 +748,6 @@ button.ash-band-chip:disabled{opacity:0.45;cursor:default}
   .panel-body{padding:1rem}
   .param-tabs{grid-template-columns:repeat(2,1fr)}
   .stat-grid{grid-template-columns:repeat(2,1fr)}
-  .zone-stats{padding:1rem}
-  .zone-stat-grid{grid-template-columns:repeat(2,1fr);gap:0.75rem;padding:0}
   .chart-container{height:240px}
   #map{height:350px}
   #ash-deposit-map{height:350px}
