@@ -438,7 +438,7 @@ function renderScenarioToggles(vol, groups, group, model) {
     };
   };
 
-  timeEl.innerHTML = toggleButtons(times, model.scenario.time, t => t);
+  timeEl.innerHTML = toggleButtons(times, model.scenario.time, t => (/PM/i.test(t) ? 'PM' : 'AM'));
   plumeEl.innerHTML = toggleButtons(plumes, model.scenario.plumeKm, km => `${km} KM`, km => simulated.has(km),
     `Not simulated for ${model.scenario.time}`);
   bind(timeEl, v => { selectedScenario.time = v; });

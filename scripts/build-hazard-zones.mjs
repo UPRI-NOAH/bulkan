@@ -1,12 +1,13 @@
 #!/usr/bin/env node
-// Pulls hazard-zone polygon shapefiles (Lahar, PDC, Lava Flow) from one
-// private Google Drive folder per volcano and converts them to GeoJSON under
-// frontend/data/hazard/, plus a manifest (frontend/data/hazard_zones.json).
+// Pulls hazard-zone polygon shapefiles from one private Google Drive folder per
+// volcano and converts them to GeoJSON under frontend/data/hazard/, plus a
+// manifest (frontend/data/hazard_zones.json).
 //
-// Folder layout: <volcano folder>/<Lahar|PDC|Lava Flow>/<one shapefile per zone>,
-// each as a .zip or as loose .shp/.dbf/.prj files (or in a subfolder). The zone
-// comes from the file name, e.g. KV_Lahar_High.zip, PDC_Buffer.zip. Other
-// subfolders of the volcano folder are ignored.
+// Folder layout: <volcano folder>/<hazard folder>/<one shapefile per zone>,
+// each as a .zip or as loose .shp/.dbf/.prj files (or in a subfolder). Each
+// hazard folder is one hazard, named after the folder (Lahar, Lava Flow,
+// Ballistics, …). The zone comes from the file name, e.g. KV_Lahar_High.zip,
+// TV_BaseSurge_Buffer.shp. A folder with no zone shapefiles is skipped.
 //
 // Auth: GDRIVE_SA_KEY = the service account's JSON key (folders shared with it).
 // Local testing: `node build-hazard-zones.mjs --local <dir>` reads
@@ -29,21 +30,17 @@ const DRIVE_FOLDERS = {
   Taal: '1I_VWjTwNsIIn9dTlEHLRTDvK-n0WF7c5',
 };
 
-// Hazard id → the subfolder names it is read from and its zones, most to least
-// severe. Aliases are other words accepted for a zone in file names. A volcano
-// whose map has one ungraded lava zone (Mayon) uses `haz`; graded maps
-// (Kanlaon) use `high` and `low`.
-const HAZARDS = {
-  lahar: { folders: ['lahar'], zones: ['high', 'medium', 'low'] },
-  pdc: { folders: ['pdc', 'pyroclasticflow'], zones: ['haz', 'buffer'] },
-  lava: { folders: ['lavaflow'], zones: ['haz', 'high', 'low'], sets: [['haz'], ['high', 'low']] },
-};
+// Zone words accepted in file names, most to least severe. Graded maps use
+// high/medium/low; ungraded maps use haz, optionally with a buffer around it.
+// Aliases are other words accepted for a zone.
+const ZONES = ['high', 'haz', 'medium', 'buffer', 'low'];
 const ZONE_ALIASES = { haz: ['hazard'], medium: ['moderate', 'med'] };
 
 // Vertices closer than this to the simplified outline are dropped.
 const SIMPLIFY_M = 5;
 
-const folderKey = name => name.toLowerCase().replace(/[^a-z0-9]/g, '');
+// Hazard id from its folder name: "Base Surge (Pyroclastic)" → base-surge-pyroclastic.
+const hazardId = name => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
 // ── Collecting shapefiles ───────────────────────────────────────────────────
 
@@ -84,11 +81,11 @@ async function collect(source, folderId, path) {
   return found;
 }
 
-function zoneOf(hazard, { name, origin }) {
+function zoneOf({ name, origin }) {
   const words = stem(name).split(/[^a-z0-9]+/);
-  const zones = HAZARDS[hazard].zones.filter(z => [z, ...(ZONE_ALIASES[z] || [])].some(w => words.includes(w)));
+  const zones = ZONES.filter(z => [z, ...(ZONE_ALIASES[z] || [])].some(w => words.includes(w)));
   if (zones.length === 1) return zones[0];
-  console.warn(`[skip] ${origin}: name should contain exactly one of ${HAZARDS[hazard].zones.join(', ')}`);
+  console.warn(`[skip] ${origin}: name should contain exactly one of ${ZONES.join(', ')}`);
   return null;
 }
 
@@ -215,16 +212,17 @@ async function main() {
   const outputs = [];
   for (const [volcano, folderId] of Object.entries(DRIVE_FOLDERS)) {
     const root = localDir ? join(localDir, volcano) : folderId;
-    const folders = (await source.list(root)).filter(f => f.isFolder);
+    const folders = (await source.list(root))
+      .filter(f => f.isFolder)
+      .sort((a, b) => a.name.localeCompare(b.name));
     for (const folder of folders) {
-      const hazard = Object.keys(HAZARDS).find(h => HAZARDS[h].folders.includes(folderKey(folder.name)));
-      if (!hazard) {
-        console.log(`[${volcano}] ignoring folder "${folder.name}"`);
-        continue;
+      const hazard = hazardId(folder.name);
+      if (volcanoes[volcano]?.[hazard]) {
+        throw new Error(`${volcano}: folders "${volcanoes[volcano][hazard].label}" and "${folder.name}" have the same id; rename one`);
       }
       const byZone = {};
       for (const shapefile of await collect(source, folder.id, `${volcano}/${folder.name}`)) {
-        const zone = zoneOf(hazard, shapefile);
+        const zone = zoneOf(shapefile);
         if (!zone) continue;
         if (byZone[zone]) {
           const [older, newer] = [byZone[zone], shapefile].sort((a, b) => a.fileTime.localeCompare(b.fileTime));
@@ -234,15 +232,11 @@ async function main() {
           byZone[zone] = shapefile;
         }
       }
-      const zones = HAZARDS[hazard].zones.filter(z => byZone[z]);
+      const zones = ZONES.filter(z => byZone[z]);
       if (zones.length === 0) {
-        console.warn(`[${volcano}] ${folder.name}: no zone shapefiles found`);
+        console.warn(`[${volcano}] skipping folder "${folder.name}": no zone shapefiles found`);
         continue;
       }
-      // `sets` lists alternative complete zone sets; warn only about the one in use.
-      const sets = HAZARDS[hazard].sets || [HAZARDS[hazard].zones];
-      const missing = (sets.find(set => set.some(z => byZone[z])) || sets[0]).filter(z => !byZone[z]);
-      if (missing.length) console.warn(`[${volcano}] ${hazard}: missing zone(s) ${missing.join(', ')}`);
 
       const features = zones.flatMap(zone => {
         const f = convert(hazard, zone, byZone[zone]);
@@ -252,6 +246,7 @@ async function main() {
       });
       const id = `${volcano.toLowerCase()}_${hazard}`;
       (volcanoes[volcano] ||= {})[hazard] = {
+        label: folder.name,
         url: `./data/hazard/${id}.geojson`,
         zones,
         updated: zones.map(z => byZone[z].fileTime).sort().at(-1),

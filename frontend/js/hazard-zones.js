@@ -1,8 +1,9 @@
-// Lahar / PDC / Lava Flow hazard zone overlays on the Risk Zones map. Each
-// hazard is switched on above the map, independently of the km radius circle;
-// its zones (e.g. Lahar High) are then switched on and off in the map legend.
+// Hazard zone overlays on the Risk Zones map (Lahar, PDC, Ballistics, …: one
+// per Drive folder, listed in the manifest per volcano). Each hazard is
+// switched on above the map; its zones (e.g. Lahar High) are then switched on
+// and off in the map legend.
 import { state } from './state.js';
-import { HAZARD_LAYERS, HAZARD_ZONES_MANIFEST_URL } from './config.js';
+import { hazardStyle, HAZARD_ZONES_MANIFEST_URL } from './config.js';
 import { updateSchoolRisk } from './school-risk.js';
 
 // Hazards switched on, and zones switched off within them ("<hazard>:<zone>").
@@ -16,9 +17,12 @@ let renderToken = 0;
 let hazardLayer = null;
 let legend = null;
 let legendCollapsed = null; // kept across redraws; starts collapsed on phones
-// Hazards and zones the current volcano has maps for, from the manifest.
+// Hazards and zones the current volcano has maps for, from the manifest, and
+// their display styles (hazardStyle in config.js).
 let available = {};
+let styles = {};
 
+const esc = s => String(s).replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
 const zonesOn = id => (available[id]?.zones || []).filter(z => !hiddenZones.has(key(id, z)));
 
 function loadManifest() {
@@ -46,15 +50,18 @@ async function loadGeojson(url) {
 function renderToggles(vol) {
   const el = document.getElementById('hazard-toggles');
   if (!el) return;
-  el.innerHTML = Object.entries(HAZARD_LAYERS).map(([id, hazard]) => {
-    const on = enabled.has(id) && Boolean(available[id]);
-    const swatch = Object.values(hazard.zones)[0].color;
-    return `
-      <button type="button" data-hazard="${id}" class="${on ? 'active' : ''}" aria-pressed="${on}"
-        ${available[id] ? '' : `disabled title="No ${hazard.label} hazard map for ${vol} yet"`}>
-        <span class="hazard-swatch" style="background:${swatch}"></span>${hazard.label}
-      </button>`;
-  }).join('');
+  const ids = Object.keys(available);
+  el.innerHTML = ids.length
+    ? ids.map(id => {
+      const hazard = styles[id];
+      const on = enabled.has(id);
+      const swatch = Object.values(hazard.zones)[0].color;
+      return `
+        <button type="button" data-hazard="${id}" class="${on ? 'active' : ''}" aria-pressed="${on}">
+          <span class="hazard-swatch" style="background:${swatch}"></span>${esc(hazard.label)}
+        </button>`;
+    }).join('')
+    : `<span style="color:var(--text3);font-size:11px;align-self:center">No hazard zone maps for ${esc(vol)} yet</span>`;
 }
 
 // Lists every zone of the switched-on hazards; each entry toggles its zone.
@@ -68,13 +75,13 @@ function makeLegend(shown) {
     L.DomEvent.disableClickPropagation(div);
     L.DomEvent.disableScrollPropagation(div);
     div.innerHTML = '<div class="legend-title ash-legend-toggle">Hazard zones</div>' + shown.map(id => `
-      <div class="legend-item hazard-legend-group">${HAZARD_LAYERS[id].label}</div>
+      <div class="legend-item hazard-legend-group">${esc(styles[id].label)}</div>
       ${available[id].zones.map(z => {
-        const zone = HAZARD_LAYERS[id].zones[z];
+        const zone = styles[id].zones[z];
         const on = !hiddenZones.has(key(id, z));
         return `
           <button type="button" class="legend-item hazard-legend-zone ${on ? '' : 'off'}" data-hazard="${id}" data-zone="${z}"
-            aria-pressed="${on}" title="${on ? 'Hide' : 'Show'} ${HAZARD_LAYERS[id].label} ${zone.label.toLowerCase()}">
+            aria-pressed="${on}" title="${on ? 'Hide' : 'Show'} ${esc(styles[id].label)} ${zone.label.toLowerCase()}">
             <span class="hazard-legend-swatch" style="background:${zone.color}66;border-color:${zone.color};border-style:${zone.dashArray ? 'dashed' : 'solid'}"></span>
             <span>${zone.label}</span>
           </button>`;
@@ -97,7 +104,7 @@ function makeLegend(shown) {
 }
 
 function drawZones(id, geojson, zones) {
-  const hazard = HAZARD_LAYERS[id];
+  const hazard = styles[id];
   // Least severe first so the nested, more severe zones sit on top.
   return [...zones].reverse().map(z => {
     const zone = hazard.zones[z];
@@ -112,7 +119,7 @@ function drawZones(id, geojson, zones) {
         fillColor: zone.color,
         fillOpacity: 0.25,
       },
-    }).bindTooltip(`${hazard.label} · ${zone.label}`, { sticky: true }).addTo(hazardLayer);
+    }).bindTooltip(`${esc(hazard.label)} · ${zone.label}`, { sticky: true }).addTo(hazardLayer);
   });
 }
 
@@ -131,10 +138,11 @@ export async function updateHazardZones(focus) {
   }
   if (token !== renderToken) return;
   available = manifest;
+  styles = Object.fromEntries(Object.entries(available).map(([id, entry]) => [id, hazardStyle(id, entry)]));
   state.hazardMapsAvailable = Object.keys(available).length > 0;
   renderToggles(vol);
 
-  const shown = Object.keys(HAZARD_LAYERS).filter(id => enabled.has(id) && available[id]);
+  const shown = Object.keys(available).filter(id => enabled.has(id));
   let data;
   try {
     data = await Promise.all(shown.map(id => loadGeojson(available[id].url)));
@@ -150,7 +158,7 @@ export async function updateHazardZones(focus) {
   // A hazard with every zone hidden stays in the legend but covers nothing.
   state.activeHazards = data
     ? shown
-      .map((id, i) => ({ id, volcano: vol, geojson: data[i], zones: zonesOn(id) }))
+      .map((id, i) => ({ id, volcano: vol, geojson: data[i], zones: zonesOn(id), layer: styles[id] }))
       .filter(h => h.zones.length)
     : [];
   updateSchoolRisk();
@@ -170,7 +178,7 @@ export async function updateHazardZones(focus) {
 
 export function initHazardZones() {
   if (!state.map) return;
-  // Above the km circle (overlay pane, 400), below markers and popups.
+  // Above other overlays (overlay pane, 400), below markers and popups.
   state.map.createPane('hazardPane').style.zIndex = 410;
   hazardLayer = L.layerGroup().addTo(state.map);
 
@@ -182,7 +190,7 @@ export function initHazardZones() {
     if (on) {
       enabled.add(id);
       // Switching a hazard on starts with all its zones showing.
-      for (const z of Object.keys(HAZARD_LAYERS[id].zones)) hiddenZones.delete(key(id, z));
+      for (const z of available[id]?.zones || []) hiddenZones.delete(key(id, z));
     } else {
       enabled.delete(id);
     }

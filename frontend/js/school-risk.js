@@ -1,10 +1,10 @@
 // School Risk Assessment: the DepEd schools inside the hazard zones switched
 // on on the Risk Zones map, as a list per zone and as markers on the map.
 import { state } from './state.js';
-import { VOLCANO_META, HAZARD_LAYERS } from './config.js';
+import { VOLCANO_META } from './config.js';
 import { calculateDistance } from './schools.js';
 
-// A school's status comes from the zones it is in (HAZARD_LAYERS `status`).
+// A school's status comes from the zones it is in (HAZARD_ZONES `status`).
 const STATUS_COLORS = { Critical: '#ff4444', Priority: '#ff8c2a', Moderate: '#ffc62a' };
 const STATUS_RANK = { Critical: 0, Priority: 1, Moderate: 2 };
 const SCHOOLS_PER_SECTION = 100;
@@ -80,14 +80,14 @@ function assess() {
     section.schools.push(entry);
   };
 
-  for (const { id, volcano, geojson, zones } of state.activeHazards) {
+  for (const { volcano, geojson, zones, layer: hazard } of state.activeHazards) {
     if (volcano !== vol) continue;
-    const hazard = HAZARD_LAYERS[id];
     const byZone = prepare(geojson);
     const zoneSections = zones.map(z => ({
       zone: z,
       title: `${hazard.label} · ${hazard.zones[z].label}`,
-      short: `${hazard.label} · ${hazard.zones[z].label.replace(/ (hazard|zone)$/i, '')}`,
+      hazardLabel: hazard.label,
+      zoneShort: hazard.zones[z].label.replace(/ (hazard|zone)$/i, ''),
       color: hazard.zones[z].color,
       schools: [],
     }));
@@ -198,12 +198,13 @@ function listHtml() {
     || '<div style="color:var(--text2);font-size:11px;text-align:center;">No schools</div>';
 }
 
-// One chip per radius / zone with the number of schools it covers.
+// One chip per zone with the number of schools it covers. The hazard and zone
+// go on separate lines so a long hazard name can't hide which zone it is.
 function chipsHtml() {
   return shownSections.map((s, i) => `
     <button type="button" class="ash-band-chip risk-coverage-chip ${i === filterSection ? 'active' : ''}" data-section="${i}"
-      aria-pressed="${i === filterSection}" style="border-left-color:${s.color}" ${s.schools.length ? '' : 'disabled'}>
-      <span>${esc(s.short)}</span><strong>${s.schools.length}</strong>
+      aria-pressed="${i === filterSection}" style="border-left-color:${s.color}" title="${esc(s.title)}" ${s.schools.length ? '' : 'disabled'}>
+      <span>${esc(s.hazardLabel)}<br>${esc(s.zoneShort)}</span><strong>${s.schools.length}</strong>
     </button>`).join('');
 }
 
@@ -216,7 +217,7 @@ function renderBox({ sections, schools }) {
   if (filterSection === null) filterTitle = null;
   const layerNames = [];
   for (const h of state.activeHazards) {
-    if (h.volcano === state.currentVolcano) layerNames.push(HAZARD_LAYERS[h.id].label);
+    if (h.volcano === state.currentVolcano) layerNames.push(h.layer.label);
   }
 
   el.innerHTML = `

@@ -1,6 +1,6 @@
 {
   "volcano": "kanlaon",
-  "syncedAt": "2026-11-10T08:09:38.076Z",
+  "syncedAt": "2026-11-20T01:09:14.616Z",
   "records": [
     {
       "DATE": "2021-09-15",
@@ -22488,6 +22488,102 @@
       "SO2Flux": 1735,
       "PlumeHeight": 100,
       "STALTA": 0.46310432569974547,
+      "eruption": 0
+    },
+    {
+      "DATE": "2026-11-10",
+      "AlertLevel": 2,
+      "VEQ": 15,
+      "VolcanicTremors": "",
+      "Rockfall": "",
+      "PDCEvents": "",
+      "SO2Flux": 1413,
+      "PlumeHeight": 100,
+      "STALTA": 1.0196078431372548,
+      "eruption": 0
+    },
+    {
+      "DATE": "2026-11-11",
+      "AlertLevel": 2,
+      "VEQ": 4,
+      "VolcanicTremors": "",
+      "Rockfall": "",
+      "PDCEvents": "",
+      "SO2Flux": 3384,
+      "PlumeHeight": 100,
+      "STALTA": 1,
+      "eruption": 0
+    },
+    {
+      "DATE": "2026-11-13",
+      "AlertLevel": 2,
+      "VEQ": 1,
+      "VolcanicTremors": "",
+      "Rockfall": "",
+      "PDCEvents": "",
+      "SO2Flux": 2432,
+      "PlumeHeight": 100,
+      "STALTA": 0.7977207977207977,
+      "eruption": 0
+    },
+    {
+      "DATE": "2026-11-14",
+      "AlertLevel": 2,
+      "VEQ": 18,
+      "VolcanicTremors": "",
+      "Rockfall": "",
+      "PDCEvents": "",
+      "SO2Flux": 2825,
+      "PlumeHeight": 100,
+      "STALTA": 0.8385416666666667,
+      "eruption": 0
+    },
+    {
+      "DATE": "2026-11-15",
+      "AlertLevel": 2,
+      "VEQ": 8,
+      "VolcanicTremors": "",
+      "Rockfall": "",
+      "PDCEvents": "",
+      "SO2Flux": 3443,
+      "PlumeHeight": 1000,
+      "STALTA": 0.9692307692307691,
+      "eruption": 0
+    },
+    {
+      "DATE": "2026-11-16",
+      "AlertLevel": 2,
+      "VEQ": 1,
+      "VolcanicTremors": "",
+      "Rockfall": "",
+      "PDCEvents": "",
+      "SO2Flux": 1848,
+      "PlumeHeight": 400,
+      "STALTA": 1.024390243902439,
+      "eruption": 0
+    },
+    {
+      "DATE": "2026-11-17",
+      "AlertLevel": 2,
+      "VEQ": 5,
+      "VolcanicTremors": "",
+      "Rockfall": "",
+      "PDCEvents": "",
+      "SO2Flux": 3540,
+      "PlumeHeight": 150,
+      "STALTA": 0.48039215686274517,
+      "eruption": 0
+    },
+    {
+      "DATE": "2026-11-18",
+      "AlertLevel": 2,
+      "VEQ": 3,
+      "VolcanicTremors": "",
+      "Rockfall": "",
+      "PDCEvents": "",
+      "SO2Flux": 3005,
+      "PlumeHeight": 100,
+      "STALTA": 0.2978723404255319,
       "eruption": 0
     }
   ]
