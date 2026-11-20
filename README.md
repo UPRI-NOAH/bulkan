@@ -2,7 +2,7 @@
 
 https://lebcstr.github.io/bulkan/
 
-Static dashboard that shows PHIVOLCS-style monitoring data (VEQ, Rockfall, PDC, SO₂, Plume), hazard zone maps (Lahar, PDC, Lava Flow) with the DepEd schools inside them, and a small chat helper.
+Static dashboard that shows PHIVOLCS-style monitoring data (VEQ, Rockfall, PDC, SO₂, Plume), hazard zone maps (Lahar, PDC, Lava Flow, Ballistics, …) with the DepEd schools inside them, and a small chat helper.
 
 ## Layout
 
@@ -19,7 +19,7 @@ Static dashboard that shows PHIVOLCS-style monitoring data (VEQ, Rockfall, PDC, 
 │   │   ├── charts.js            trend chart + radar chart (Chart.js)
 │   │   ├── map.js               Risk Zones base map + volcano markers
 │   │   ├── ash-deposit.js       Ash3d deposit map + schools per thickness band
-│   │   ├── hazard-zones.js      Lahar / PDC / Lava Flow overlays on the risk zone map
+│   │   ├── hazard-zones.js      hazard zone overlays (one per Drive folder) on the risk zone map
 │   │   ├── school-risk.js       schools inside the switched-on hazard zones (list + markers)
 │   │   ├── leaflet-tiles.js     removes white lines between map tiles (both maps)
 │   │   ├── dashboard.js         top-level render (tabs, params)
@@ -139,23 +139,37 @@ node build-ash-deposits.mjs --local <dir>
 # writes frontend/data/ash/*.geojson and frontend/data/ash_deposits.json
 ```
 
-## Hazard zones (Lahar, PDC, Lava Flow)
+## Hazard zones
 
-The **Risk Zones** panel shows only these hazard maps. The **Hazard zones** toggles above the map switch Lahar, PDC and Lava Flow on and off; each hazard's zones (e.g. Lahar High) can then be hidden or shown individually from the map legend. Toggles stay set when you change volcano; a hazard with no map for the current volcano is greyed out.
+The **Risk Zones** panel shows only hazard zone maps. Each volcano's hazards come from its Drive folders, so the **Hazard zones** toggles above the map change with the volcano:
 
-The **School Risk Assessment** lists the DepEd schools inside the zones that are on, one section per zone, with a coverage chip per zone that filters the list. A school inside nested zones of one hazard is listed under the most severe of them. Its marker color is its worst status across the zones it is in, set by `status` in `HAZARD_LAYERS` (`frontend/js/config.js`).
-
-| Hazard | Zones (most to least severe) |
+| Volcano | Hazards (folder names) |
 |---|---|
-| Lahar | high, medium, low |
-| PDC | haz, buffer |
-| Lava Flow | high, low; or a single haz zone for an ungraded map (Mayon) |
+| Kanlaon | Lahar, Lava Flow, PDC |
+| Mayon | Lahar, Lava Flow, Pyroclastic Flow |
+| Taal | Ballistics, Base Surge (Pyroclastic), Fissure |
+
+Each hazard's zones (e.g. Lahar High) can be hidden or shown individually from the map legend. A hazard that is on stays on when you switch to another volcano with a folder of the same name (e.g. Lahar).
+
+The **School Risk Assessment** lists the DepEd schools inside the zones that are on, one section per zone, with a coverage chip per zone that filters the list. A school inside nested zones of one hazard is listed under the most severe of them. Its marker color is its worst status across the zones it is in.
+
+Zones come from the file names. These are the zone words, most to least severe, with the school status each gives:
+
+| Zone | File name word | Status |
+|---|---|---|
+| High hazard | `high` | Critical |
+| Hazard zone | `haz` or `hazard` | Critical |
+| Medium hazard | `medium`, `med` or `moderate` | Priority |
+| Buffer zone (dashed) | `buffer` | Priority |
+| Low hazard | `low` | Moderate |
+
+Graded maps use high/medium/low (Lahar). Ungraded maps use haz, optionally with a buffer (PDC, Base Surge).
 
 ### Publishing zones
 
-Each volcano has one Drive folder, inside the shared **Hazard Zones** folder, with a `Lahar`, `PDC` (or `Pyroclastic Flow`) and `Lava Flow` subfolder. Other subfolders are ignored, and a volcano without any of them simply has no hazard map.
+Each volcano has one Drive folder, inside the shared **Hazard Zones** folder, with **one subfolder per hazard**. The subfolder's name is the hazard's name on the site, so a new hazard is added just by creating a folder for it. A subfolder with no zone shapefiles (e.g. Kanlaon's empty `Composite Lahar and PDC`) is skipped and the log says so.
 
-Upload one polygon shapefile per zone into its hazard's subfolder, as a `.zip` or as the loose files (`.shp` and `.prj` are required). The **file name must contain the zone**, e.g. `KV_Lahar_High.zip`, `PDC_Buffer.zip`, `KV_LF_Low.zip`; `hazard` is accepted for `haz`, and `moderate` for `medium`. Attribute columns aren't used.
+Upload one polygon shapefile per zone into its hazard's subfolder, as a `.zip` or as the loose files (`.shp` and `.prj` are required). The **file name must contain exactly one zone word** from the table above, e.g. `KV_Lahar_High.zip`, `PDC_Buffer.zip`, `TV_Ballistics_Haz.shp`. Attribute columns aren't used.
 
 - Shapefiles must be in **Web Mercator** (the ArcGIS default) or **WGS84 lon/lat**. Anything else (e.g. UTM 51N) fails the build with a message naming the file; reproject it first.
 - Outlines are simplified to about 5 m so the page stays light.
@@ -166,14 +180,16 @@ Zones change rarely, so they are **not** rebuilt by the daily sync. After upload
 ```bash
 cd scripts
 GDRIVE_SA_KEY="$(cat path/to/key.json)" npm run hazard
-# or from a local folder laid out as <dir>/Kanlaon/{Lahar,PDC,Lava Flow}/:
+# or from a local folder laid out as <dir>/<Volcano>/<hazard folder>/:
 node build-hazard-zones.mjs --local <dir>
 # writes frontend/data/hazard/*.geojson and frontend/data/hazard_zones.json
 ```
 
 Check the log for skipped files and `git diff --stat frontend/data/hazard` before committing. If Drive can't be read the script stops without touching the published files.
 
-To add another volcano, create the same folder layout, share it with the service account, and add its ID to `DRIVE_FOLDERS` in `scripts/build-hazard-zones.mjs` and to the table above. Colors and labels are in `HAZARD_LAYERS` in `frontend/js/config.js`.
+To add another volcano, create the same folder layout, share it with the service account, and add its folder ID to `DRIVE_FOLDERS` in `scripts/build-hazard-zones.mjs`, then list its hazards in the volcano table above.
+
+Colors are in `HAZARD_COLORS` in `frontend/js/config.js`, keyed by the hazard id the build makes from the folder name (lowercase, words joined by `-`: `Base Surge (Pyroclastic)` → `base-surge-pyroclastic`). Each hazard has a dark-to-light set of shades, spread over its zones by severity. A new hazard without an entry still shows, with a fallback color; add an entry to pick its color. Renaming a folder changes its id, so update the entry too. Zone labels and statuses are in `HAZARD_ZONES`.
 
 ## Map tile lines
 

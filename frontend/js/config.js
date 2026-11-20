@@ -78,34 +78,48 @@ export const SCHOOLS_URL = './data/deped_schools.json';
 // Google Drive folders by scripts/build-ash-deposits.mjs.
 export const ASH_DEPOSIT_MANIFEST_URL = './data/ash_deposits.json';
 
-// Hazard zone maps per volcano, from scripts/build-hazard-zones.mjs. Each
-// hazard has its own hue; zones run from most to least severe, and the zone
-// keys match the manifest's. `status` is the school risk status for a school
-// inside the zone (see School Risk Assessment).
+// Hazard zone maps per volcano, from scripts/build-hazard-zones.mjs. Hazards
+// come from the Drive folder names (ids like `lahar`, `base-surge-pyroclastic`)
+// and zones from the file names; both are listed in the manifest.
 export const HAZARD_ZONES_MANIFEST_URL = './data/hazard_zones.json';
-export const HAZARD_LAYERS = {
-  lahar: {
-    label: 'Lahar',
-    zones: {
-      high: { label: 'High hazard', color: '#1e40af', status: 'Critical' },
-      medium: { label: 'Medium hazard', color: '#3b82f6', status: 'Priority' },
-      low: { label: 'Low hazard', color: '#93c5fd', status: 'Moderate' },
-    },
-  },
-  pdc: {
-    label: 'PDC',
-    zones: {
-      haz: { label: 'Hazard zone', color: '#7e22ce', status: 'Critical' },
-      buffer: { label: 'Buffer zone', color: '#c084fc', dashArray: '6 4', status: 'Priority' },
-    },
-  },
-  lava: {
-    label: 'Lava Flow',
-    zones: {
-      // Ungraded lava flow hazard zone (Mayon); Kanlaon's map is graded high/low.
-      haz: { label: 'Hazard zone', color: '#b91c1c', status: 'Critical' },
-      high: { label: 'High hazard', color: '#b91c1c', status: 'Critical' },
-      low: { label: 'Low hazard', color: '#f97316', status: 'Moderate' },
-    },
-  },
+
+// Zone words, most to least severe. `status` is the school risk status for a
+// school inside the zone (see School Risk Assessment).
+export const HAZARD_ZONES = {
+  high: { label: 'High hazard', status: 'Critical' },
+  haz: { label: 'Hazard zone', status: 'Critical' },
+  medium: { label: 'Medium hazard', status: 'Priority' },
+  buffer: { label: 'Buffer zone', status: 'Priority', dashArray: '6 4' },
+  low: { label: 'Low hazard', status: 'Moderate' },
 };
+
+// Each hazard's colors, dark to light: the most severe zone takes the first,
+// the least severe the last. Hazards not listed take a fallback in turn.
+export const HAZARD_COLORS = {
+  lahar: ['#1e40af', '#3b82f6', '#93c5fd'],
+  pdc: ['#7e22ce', '#a855f7', '#c084fc'],
+  'pyroclastic-flow': ['#7e22ce', '#a855f7', '#c084fc'],
+  'lava-flow': ['#b91c1c', '#ea580c', '#f97316'],
+  ballistics: ['#854d0e', '#ca8a04', '#facc15'],
+  'base-surge-pyroclastic': ['#be185d', '#ec4899', '#f9a8d4'],
+  fissure: ['#0f766e', '#14b8a6', '#5eead4'],
+};
+const FALLBACK_COLORS = [
+  ['#15803d', '#22c55e', '#86efac'],
+  ['#334155', '#64748b', '#cbd5e1'],
+  ['#0e7490', '#06b6d4', '#67e8f9'],
+];
+
+// Display style for one hazard from its manifest entry: its label and, per
+// zone, label, color, status and dash. Zone colors spread over the hazard's
+// shades by severity, so one zone is dark and two are dark and light.
+export function hazardStyle(id, { label, zones }) {
+  const shades = HAZARD_COLORS[id]
+    || FALLBACK_COLORS[[...id].reduce((n, c) => n + c.charCodeAt(0), 0) % FALLBACK_COLORS.length];
+  const ordered = Object.keys(HAZARD_ZONES).filter(z => zones.includes(z));
+  const shade = i => shades[ordered.length === 1 ? 0 : Math.round(i * (shades.length - 1) / (ordered.length - 1))];
+  return {
+    label: label || id,
+    zones: Object.fromEntries(ordered.map((z, i) => [z, { ...HAZARD_ZONES[z], color: shade(i) }])),
+  };
+}
