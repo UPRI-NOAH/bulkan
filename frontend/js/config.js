@@ -22,12 +22,6 @@ export const VOLCANO_META = {
   },
 };
 
-export const ZONES = {
-  6: { pop: 7186, area: 113.1, radius: 6000, color: '#44cc66', kmToSafeZone: 8 },
-  8: { pop: 38088, area: 201.1, radius: 8000, color: '#ffc62a', kmToSafeZone: 10 },
-  10: { pop: 184376, area: 314.2, radius: 10000, color: '#ff4444', kmToSafeZone: 15 },
-};
-
 export const THRESHOLDS = {
   VEQ: { normal: 50, elevated: 100, high: 200, critical: 300 },
   Rockfall: { normal: 100, elevated: 200, high: 300, critical: 500 },
@@ -79,3 +73,53 @@ export const VOLCANO_SNAPSHOT_FILES = {
 };
 
 export const SCHOOLS_URL = './data/deped_schools.json';
+
+// USGS Ash3d deposit models per volcano, newest first. Produced daily from the
+// Google Drive folders by scripts/build-ash-deposits.mjs.
+export const ASH_DEPOSIT_MANIFEST_URL = './data/ash_deposits.json';
+
+// Hazard zone maps per volcano, from scripts/build-hazard-zones.mjs. Hazards
+// come from the Drive folder names (ids like `lahar`, `base-surge-pyroclastic`)
+// and zones from the file names; both are listed in the manifest.
+export const HAZARD_ZONES_MANIFEST_URL = './data/hazard_zones.json';
+
+// Zone words, most to least severe. `status` is the school risk status for a
+// school inside the zone (see School Risk Assessment).
+export const HAZARD_ZONES = {
+  high: { label: 'High hazard', status: 'Critical' },
+  haz: { label: 'Hazard zone', status: 'Critical' },
+  medium: { label: 'Medium hazard', status: 'Priority' },
+  buffer: { label: 'Buffer zone', status: 'Priority', dashArray: '6 4' },
+  low: { label: 'Low hazard', status: 'Moderate' },
+};
+
+// Each hazard's colors, dark to light: the most severe zone takes the first,
+// the least severe the last. Hazards not listed take a fallback in turn.
+export const HAZARD_COLORS = {
+  lahar: ['#1e40af', '#3b82f6', '#93c5fd'],
+  pdc: ['#7e22ce', '#a855f7', '#c084fc'],
+  'pyroclastic-flow': ['#7e22ce', '#a855f7', '#c084fc'],
+  'lava-flow': ['#b91c1c', '#ea580c', '#f97316'],
+  ballistics: ['#854d0e', '#ca8a04', '#facc15'],
+  'base-surge-pyroclastic': ['#be185d', '#ec4899', '#f9a8d4'],
+  fissure: ['#0f766e', '#14b8a6', '#5eead4'],
+};
+const FALLBACK_COLORS = [
+  ['#15803d', '#22c55e', '#86efac'],
+  ['#334155', '#64748b', '#cbd5e1'],
+  ['#0e7490', '#06b6d4', '#67e8f9'],
+];
+
+// Display style for one hazard from its manifest entry: its label and, per
+// zone, label, color, status and dash. Zone colors spread over the hazard's
+// shades by severity, so one zone is dark and two are dark and light.
+export function hazardStyle(id, { label, zones }) {
+  const shades = HAZARD_COLORS[id]
+    || FALLBACK_COLORS[[...id].reduce((n, c) => n + c.charCodeAt(0), 0) % FALLBACK_COLORS.length];
+  const ordered = Object.keys(HAZARD_ZONES).filter(z => zones.includes(z));
+  const shade = i => shades[ordered.length === 1 ? 0 : Math.round(i * (shades.length - 1) / (ordered.length - 1))];
+  return {
+    label: label || id,
+    zones: Object.fromEntries(ordered.map((z, i) => [z, { ...HAZARD_ZONES[z], color: shade(i) }])),
+  };
+}

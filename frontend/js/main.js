@@ -1,5 +1,8 @@
 import { render, selectVol } from './dashboard.js';
-import { initMap, selectZone } from './map.js';
+import { initMap } from './map.js';
+import { initAshDepositMap, updateAshDeposit } from './ash-deposit.js';
+import { initHazardZones } from './hazard-zones.js';
+import { updateSchoolRisk } from './school-risk.js';
 import { loadDepEdSchools } from './schools.js';
 import { loadVolcanoData, initializeMockData } from './data.js';
 import { selectTimeRange, selectParameter, navigatePeriod } from './charts.js';
@@ -8,7 +11,6 @@ import { toggleLaharChat, sendLaharMessage, resetLaharChat } from './lahar-chat.
 // Inline onclick handlers in index.html call these as globals.
 Object.assign(window, {
   selectVol,
-  selectZone,
   selectTimeRange,
   selectParameter,
   navigatePeriod,
@@ -22,17 +24,33 @@ function setStatus(text) {
   if (el) el.textContent = text;
 }
 
+// Minimize / expand buttons in the Risk Zones and Ashfall Simulation headers.
+function initPanelToggles() {
+  document.querySelectorAll('[data-panel-toggle]').forEach(btn => {
+    const label = btn.getAttribute('aria-label').replace(/^Minimize /, '');
+    btn.addEventListener('click', () => {
+      const collapsed = btn.closest('.panel').classList.toggle('collapsed');
+      btn.textContent = collapsed ? '+' : '−';
+      btn.setAttribute('aria-expanded', String(!collapsed));
+      btn.setAttribute('aria-label', `${collapsed ? 'Expand' : 'Minimize'} ${label}`);
+    });
+  });
+}
+
 async function main() {
+  initPanelToggles();
   initMap();
+  initHazardZones();
+  initAshDepositMap();
 
   initializeMockData();
   render();
   setStatus('Loading… (Sample Data)');
 
-  selectZone(null, 6);
-
   try {
     await loadDepEdSchools();
+    updateSchoolRisk();
+    updateAshDeposit();
   } catch (e) {
     console.error('[main] failed to load schools:', e);
   }
