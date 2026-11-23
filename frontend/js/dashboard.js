@@ -1,8 +1,11 @@
 import { state } from './state.js';
 import { VOLCANO_META } from './config.js';
+import { STALTA_THRESHOLD } from './charts.js';
 import { updateTrendChart, updateRadarChart, updateNavigationButtons } from './charts.js';
-import { updateMapMarkers, selectZone } from './map.js';
+import { updateMapMarkers } from './map.js';
 import { updateLiveFeeds } from './kanlaon-snapshot.js';
+import { updateAshDeposit } from './ash-deposit.js';
+import { updateHazardZones } from './hazard-zones.js';
 
 export function render() {
   renderTabs();
@@ -18,15 +21,22 @@ function renderTabs() {
     const data = state.dashboardData[vol] || [];
     let level = 1;
     let date = 'N/A';
+    let stalta = NaN;
     if (data.length > 0) {
       const latest = data[data.length - 1];
       if (latest.AlertLevel) level = Math.round(parseFloat(latest.AlertLevel)) || 1;
       date = (latest.DATE || 'N/A').toString().substring(0, 10);
+      stalta = parseFloat(latest.STALTA);
     }
+    const staltaExceeded = stalta > STALTA_THRESHOLD;
     const levelClass = level === 1 ? 'level-1' : level === 2 ? 'level-2' : 'level-3';
     const isActive = vol === state.currentVolcano ? 'active' : '';
+    const staltaClass = staltaExceeded ? 'stalta-alert' : '';
+    const staltaWarning = staltaExceeded
+      ? `<div class="stalta-warning">STA/LTA &gt; ${STALTA_THRESHOLD.toFixed(1)}: possible eruption within 7–14 days</div>`
+      : '';
     return `
-      <div class="vtab ${isActive}" onclick="selectVol('${vol}')" style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem">
+      <div class="vtab ${isActive} ${staltaClass}" onclick="selectVol('${vol}')" style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem">
         <div style="flex:1">
           <h3 style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem">
             <span style="font-size:20px">🌋</span>
@@ -34,6 +44,7 @@ function renderTabs() {
           </h3>
           <p>${VOLCANO_META[vol].elevation} • ${VOLCANO_META[vol].type}</p>
           <p style="color:var(--text3);margin-top:0.3rem">As of: ${date}</p>
+          ${staltaWarning}
         </div>
         <div class="alert-badge ${levelClass}">${level}</div>
       </div>`;
@@ -51,8 +62,6 @@ function renderParams() {
   }
 
   const latest = data[data.length - 1];
-  const date = (latest.DATE || 'N/A').toString().substring(0, 10);
-  document.getElementById('param-latest-update').textContent = `Latest: ${date}`;
 
   const params = [
     { key: 'VEQ', label: 'VEQ', unit: 'events/day' },
@@ -61,6 +70,7 @@ function renderParams() {
     { key: 'PDCEvents', label: 'PDC Events', unit: 'events/day' },
     { key: 'SO2Flux', label: 'SO₂ Flux', unit: 'tons/day' },
     { key: 'PlumeHeight', label: 'Plume Height', unit: 'm' },
+    { key: 'STALTA', label: 'STA/LTA', unit: 'ratio' },
   ];
 
   let html = '';
@@ -73,12 +83,14 @@ function renderParams() {
       if (typeof val === 'string') {
         const num = parseFloat(val);
         if (!isNaN(num) && num !== 0) display = Math.round(num * 100) / 100;
+      } else if (typeof val === 'number') {
+        display = Math.round(val * 100) / 100;
       }
       html += `
         <div class="param-item">
           <div>
-            <div style="font-size:10px;color:var(--text2);text-transform:uppercase">${p.label}</div>
-            <div style="font-size:9px;color:var(--text3);margin-top:0.2rem">${p.unit}</div>
+            <div style="font-size:14px;color:var(--text2);text-transform:uppercase">${p.label}</div>
+            <div style="font-size:12px;color:var(--text3);margin-top:0.2rem">${p.unit}</div>
           </div>
           <div class="param-value">${display}</div>
         </div>`;
@@ -94,7 +106,8 @@ export function selectVol(vol) {
   if (state.map) {
     const cfg = VOLCANO_META[vol];
     state.map.setView(cfg.coords, cfg.zoomLevel);
-    selectZone(null, 6);
+    updateHazardZones();
   }
   updateLiveFeeds();
+  updateAshDeposit();
 }

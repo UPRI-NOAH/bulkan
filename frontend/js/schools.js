@@ -10,13 +10,6 @@ export function calculateDistance(lat1, lon1, lat2, lon2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-export function getSchoolRiskStatusByDistance(distanceKm) {
-  if (distanceKm <= 3) return 'Critical';
-  if (distanceKm <= 6) return 'Priority';
-  if (distanceKm <= 10) return 'Moderate';
-  return 'Low';
-}
-
 function getSchoolRiskStatus(hazardLevel) {
   return { High: 'Critical', Moderate: 'Priority', Low: 'Moderate', 'Little to None': 'Low' }[hazardLevel] || 'Low';
 }
@@ -48,24 +41,4 @@ export async function loadDepEdSchools() {
 
   console.log(`[schools] loaded ${state.allDepEdSchools.length} DepEd schools`);
   return state.allDepEdSchools.length;
-}
-
-export function getDepEdSchoolsInRadius(volcanLat, volcanLng, radiusKm) {
-  const inRadius = state.allDepEdSchools
-    .map(s => ({
-      name: s.name,
-      lat: s.lat,
-      lng: s.lng,
-      distance: calculateDistance(volcanLat, volcanLng, s.lat, s.lng),
-      type: s.type,
-      isDepEd: true,
-    }))
-    .filter(s => s.distance <= radiusKm)
-    .map(s => ({ ...s, status: getSchoolRiskStatusByDistance(s.distance) }));
-
-  return {
-    elementary: inRadius.filter(s => s.type === 'Elementary').sort((a, b) => a.distance - b.distance),
-    highSchool: inRadius.filter(s => s.type === 'High School').sort((a, b) => a.distance - b.distance),
-    total: inRadius,
-  };
 }
