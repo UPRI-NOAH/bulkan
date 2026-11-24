@@ -1,6 +1,6 @@
 # Local Copy of Bulkan — Volcano Impact Risk Model (UP-NOAH)
 
-https://lebcstr.github.io/bulkan/
+https://upri-noah.github.io/bulkan/
 
 Static dashboard that shows PHIVOLCS-style monitoring data (VEQ, Rockfall, PDC, SO₂, Plume), hazard zone maps (Lahar, PDC, Lava Flow, Ballistics, …) with the DepEd schools inside them, and a small chat helper.
 
