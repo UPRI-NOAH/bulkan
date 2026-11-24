@@ -59,22 +59,13 @@
       }
     },
     "Taal": {
-      "ballistics": {
-        "label": "Ballistics",
-        "url": "./data/hazard/taal_ballistics.geojson",
-        "zones": [
-          "haz"
-        ],
-        "updated": "2026-11-19T06:38:21.686Z"
-      },
       "base-surge-pyroclastic": {
         "label": "Base Surge (Pyroclastic)",
         "url": "./data/hazard/taal_base-surge-pyroclastic.geojson",
         "zones": [
-          "haz",
-          "buffer"
+          "haz"
         ],
-        "updated": "2026-11-19T06:12:55.507Z"
+        "updated": "2026-11-20T07:14:49.000Z"
       },
       "fissure": {
         "label": "Fissure",
@@ -82,7 +73,7 @@
         "zones": [
           "haz"
         ],
-        "updated": "2026-11-20T06:22:11.153Z"
+        "updated": "2026-11-20T07:16:08.000Z"
       }
     }
   }
