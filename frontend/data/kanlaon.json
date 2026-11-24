@@ -1,6 +1,6 @@
 {
   "volcano": "kanlaon",
-  "syncedAt": "2026-11-23T15:13:22.256Z",
+  "syncedAt": "2026-11-24T01:00:26.992Z",
   "records": [
     {
       "DATE": "2021-09-15",
@@ -22632,6 +22632,18 @@
       "SO2Flux": 2673,
       "PlumeHeight": 300,
       "STALTA": 1.1925925925925926,
+      "eruption": 0
+    },
+    {
+      "DATE": "2026-11-23",
+      "AlertLevel": 2,
+      "VEQ": 6,
+      "VolcanicTremors": "",
+      "Rockfall": "",
+      "PDCEvents": "",
+      "SO2Flux": 3265,
+      "PlumeHeight": 200,
+      "STALTA": 0.9674796747967481,
       "eruption": 0
     }
   ]
