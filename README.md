@@ -1,4 +1,4 @@
-Bulkan — Volcano Impact Risk Model (UP-NOAH)
+# Bulkan — Volcano Impact Risk Model (UP-NOAH)
 
 https://upri-noah.github.io/bulkan/
 
