@@ -93,13 +93,19 @@ export const HAZARD_ZONES = {
   low: { label: 'Low hazard', status: 'Moderate' },
 };
 
+// School risk status for every zone of a hazard, overriding the zone's own.
+// Taal's base surge zone is a priority area rather than a critical one.
+export const HAZARD_STATUS = {
+  'base-surge-pyroclastic': 'Priority',
+};
+
 // Each hazard's colors, dark to light: the most severe zone takes the first,
 // the least severe the last. Hazards not listed take a fallback in turn.
 export const HAZARD_COLORS = {
-  lahar: ['#1e40af', '#3b82f6', '#93c5fd'],
-  pdc: ['#7e22ce', '#a855f7', '#c084fc'],
+  lahar: ['#e6550d', '#f5904c', '#fcbf82'],
+  pdc: ['#762a83', '#d0acd2'],
   'pyroclastic-flow': ['#7e22ce', '#a855f7', '#c084fc'],
-  'lava-flow': ['#b91c1c', '#ea580c', '#f97316'],
+  'lava-flow': ['#de2d26', '#ff8383'],
   ballistics: ['#854d0e', '#ca8a04', '#facc15'],
   'base-surge-pyroclastic': ['#be185d', '#ec4899', '#f9a8d4'],
   fissure: ['#0f766e', '#14b8a6', '#5eead4'],
@@ -120,6 +126,10 @@ export function hazardStyle(id, { label, zones }) {
   const shade = i => shades[ordered.length === 1 ? 0 : Math.round(i * (shades.length - 1) / (ordered.length - 1))];
   return {
     label: label || id,
-    zones: Object.fromEntries(ordered.map((z, i) => [z, { ...HAZARD_ZONES[z], color: shade(i) }])),
+    zones: Object.fromEntries(ordered.map((z, i) => [z, {
+      ...HAZARD_ZONES[z],
+      ...(HAZARD_STATUS[id] && { status: HAZARD_STATUS[id] }),
+      color: shade(i),
+    }])),
   };
 }

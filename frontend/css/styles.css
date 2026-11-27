@@ -297,6 +297,7 @@ button.ash-band-chip:disabled{opacity:0.45;cursor:default}
   margin-bottom:0.75rem;
   gap:1rem;
 }
+#param-list.scrollable{overflow-y:auto}
 .param-item > div:first-child {
   flex:1;
 }
@@ -486,7 +487,7 @@ button.ash-band-chip:disabled{opacity:0.45;cursor:default}
 .param-tab:hover{border-color:var(--accent)}
 .param-tab.active{background:var(--accent);border-color:var(--accent);color:white}
 .chart-container{height:300px;margin:1rem 0}
-.stat-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:0.75rem;margin-top:1rem}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:0.75rem;margin-top:1rem}
 .stat-card{background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:0.75rem;text-align:center}
 .stat-label{font-size:9px;color:var(--text2);text-transform:uppercase;margin-bottom:0.3rem}
 .stat-value{font-size:18px;font-weight:700;color:var(--accent)}
