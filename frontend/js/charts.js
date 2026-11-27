@@ -6,6 +6,41 @@ const ERUPTION_LABEL = 'Eruption';
 const ERUPTION_COLOR = '#ff0000';
 export const STALTA_THRESHOLD = 2.0;
 
+const isBlank = v => v === null || v === undefined || v === '' || v === 'None' || v === 'none';
+
+// True when the volcano has reported the parameter at least once (0 counts).
+export function isRecorded(vol, key) {
+  return (state.dashboardData[vol] || []).some(r => !isBlank(r[key]));
+}
+
+// Trend tabs, each with the data key it plots and its average card.
+const TREND_PARAMS = [
+  { id: 'veq', key: 'VEQ', tab: 'VEQ (events/day)', stat: 'avg-veq' },
+  { id: 'rockfall', key: 'Rockfall', tab: 'Rockfall (events/day)', stat: 'avg-rockfall' },
+  { id: 'pdc', key: 'PDCEvents', tab: 'PDC (events/day)', stat: 'avg-pdc' },
+  { id: 'so2', key: 'SO2Flux', tab: 'SO₂ (tons/day)', stat: 'avg-so2' },
+  { id: 'plume', key: 'PlumeHeight', tab: 'Plume (m)', stat: 'avg-plume' },
+];
+
+// Tabs and average cards only for the parameters this volcano records.
+function renderParamTabs() {
+  const vol = state.currentVolcano;
+  const shown = TREND_PARAMS.filter(p => isRecorded(vol, p.key));
+  if (state.currentParameter !== 'all' && !shown.some(p => p.id === state.currentParameter)) {
+    state.currentParameter = 'all';
+  }
+  const tab = (id, label) => `<button class="param-tab ${state.currentParameter === id ? 'active' : ''}" onclick="selectParameter(event, '${id}')">${label}</button>`;
+  const el = document.querySelector('.param-tabs');
+  if (el) {
+    el.innerHTML = tab('all', 'All') + shown.map(p => tab(p.id,
+      p.id === 'veq' && isRecorded(vol, 'STALTA') ? `${p.tab} &amp; STA/LTA (ratio)` : p.tab)).join('');
+  }
+  for (const p of TREND_PARAMS) {
+    const card = document.getElementById(p.stat)?.closest('.stat-card');
+    if (card) card.hidden = !shown.includes(p);
+  }
+}
+
 function daysToShow() {
   return DAYS_BY_RANGE[state.currentTimeRange] ?? 7;
 }
@@ -173,6 +208,7 @@ function thresholdHoverPlugin(label, value, color) {
 }
 
 export function updateTrendChart() {
+  renderParamTabs();
   const data = getDataForTimeRange();
   const ctx = document.getElementById('trendChart');
   if (state.trendChart) state.trendChart.destroy();
@@ -185,6 +221,7 @@ export function updateTrendChart() {
   let eventsMax = 0, so2Max = 0, plumeMax = 0;
 
   const pushSeries = (key, label, color, group) => {
+    if (!isRecorded(state.currentVolcano, key)) return;
     const vals = data.map(d => parseFloat(d[key]) || 0);
     const localMax = Math.max(...vals);
     if (group === 'events') eventsMax = Math.max(eventsMax, localMax);
@@ -210,7 +247,7 @@ export function updateTrendChart() {
   let staltaMax = 0;
   let hasStalta = false;
   const STALTA_THRESHOLD_LABEL = `STA/LTA threshold (${STALTA_THRESHOLD.toFixed(1)})`;
-  if (param === 'veq') {
+  if (param === 'veq' && isRecorded(state.currentVolcano, 'STALTA')) {
     const stalta = data.map(d => {
       const v = parseFloat(d.STALTA);
       return isNaN(v) ? null : v;

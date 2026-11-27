@@ -1,10 +1,11 @@
 // School Risk Assessment: the DepEd schools inside the hazard zones switched
-// on on the Risk Zones map, as a list per zone and as markers on the map.
+// on on the Risk Zones map, as a list per evacuation status and as markers.
 import { state } from './state.js';
 import { VOLCANO_META } from './config.js';
 import { calculateDistance } from './schools.js';
 
-// A school's status comes from the zones it is in (HAZARD_ZONES `status`).
+// A school's status comes from the zones it is in (HAZARD_ZONES `status`,
+// or HAZARD_STATUS for hazards that override it).
 const STATUS_COLORS = { Critical: '#ff4444', Priority: '#ff8c2a', Moderate: '#ffc62a' };
 const STATUS_RANK = { Critical: 0, Priority: 1, Moderate: 2 };
 const SCHOOLS_PER_SECTION = 100;
@@ -50,15 +51,14 @@ const inPolygons = (lng, lat, polygons) => polygons.some(({ rings, bbox }) =>
 
 // ── Assessment ──────────────────────────────────────────────────────────────
 
-// Sections (one per hazard zone, in display order) and every listed school
-// once, with its worst status across the zones it falls in.
+// Sections (one per evacuation status, most severe first) and every listed
+// school once, with its worst status across the zones it falls in.
 function assess() {
   const vol = state.currentVolcano;
   const vent = VOLCANO_META[vol].coords;
-  const sections = [];
   const schools = new Map();
 
-  const add = (section, school, status, label) => {
+  const add = (school, status, label) => {
     const key = school.id || school.name;
     let entry = schools.get(key);
     if (!entry) {
@@ -77,32 +77,28 @@ function assess() {
     }
     if (STATUS_RANK[status] < STATUS_RANK[entry.status]) entry.status = status;
     entry.layers.push(label);
-    section.schools.push(entry);
   };
 
   for (const { volcano, geojson, zones, layer: hazard } of state.activeHazards) {
     if (volcano !== vol) continue;
     const byZone = prepare(geojson);
-    const zoneSections = zones.map(z => ({
-      zone: z,
-      title: `${hazard.label} · ${hazard.zones[z].label}`,
-      hazardLabel: hazard.label,
-      zoneShort: hazard.zones[z].label.replace(/ (hazard|zone)$/i, ''),
-      color: hazard.zones[z].color,
-      schools: [],
-    }));
     const all = Object.values(byZone).flat().map(p => p.bbox);
     const [minX, minY, maxX, maxY] = [0, 1, 2, 3].map(i => (i < 2 ? Math.min : Math.max)(...all.map(b => b[i])));
     for (const s of state.allDepEdSchools) {
       if (s.lng < minX || s.lng > maxX || s.lat < minY || s.lat > maxY) continue;
       // Zones are most severe first, so a school in nested zones gets the worst.
-      const section = zoneSections.find(zs => inPolygons(s.lng, s.lat, byZone[zs.zone] || []));
-      if (section) add(section, s, hazard.zones[section.zone].status, section.title);
+      const zone = zones.find(z => inPolygons(s.lng, s.lat, byZone[z] || []));
+      if (zone) add(s, hazard.zones[zone].status, `${hazard.label} · ${hazard.zones[zone].label}`);
     }
-    zoneSections.forEach(zs => zs.schools.sort((a, b) => a.distance - b.distance));
-    sections.push(...zoneSections);
   }
-  return { sections, schools: [...schools.values()] };
+
+  const list = [...schools.values()].sort((a, b) => a.distance - b.distance);
+  const sections = Object.keys(STATUS_RANK).map(status => ({
+    title: status,
+    color: STATUS_COLORS[status],
+    schools: list.filter(s => s.status === status),
+  }));
+  return { sections, schools: list };
 }
 
 // ── Map markers ─────────────────────────────────────────────────────────────
@@ -133,7 +129,7 @@ function drawMarkers(schools) {
             <strong style="color:#8892a8;">Evacuation Status:</strong><br/>
             <span style="color:${color};font-weight:700;font-size:13px;">${s.status}</span>
           </div>
-          <div style="margin-bottom:0.5rem;font-size:11px;"><strong style="color:#8892a8;">Inside:</strong> ${s.layers.map(esc).join(', ')}</div>
+          <div style="margin-bottom:0.5rem;font-size:11px;"><strong style="color:#8892a8;">Inside:</strong><br/>${s.layers.map(esc).join('<br/>')}</div>
           <div style="padding-top:0.5rem;border-top:1px solid var(--border);margin-top:0.5rem;font-size:10px;color:#8892a8;">${s.distance.toFixed(1)} km from vent${s.municipality ? ` • ${esc(s.municipality)}` : ''}</div>
         </div>
       </div>
@@ -198,13 +194,12 @@ function listHtml() {
     || '<div style="color:var(--text2);font-size:11px;text-align:center;">No schools</div>';
 }
 
-// One chip per zone with the number of schools it covers. The hazard and zone
-// go on separate lines so a long hazard name can't hide which zone it is.
+// One chip per evacuation status with the number of schools in it.
 function chipsHtml() {
   return shownSections.map((s, i) => `
     <button type="button" class="ash-band-chip risk-coverage-chip ${i === filterSection ? 'active' : ''}" data-section="${i}"
       aria-pressed="${i === filterSection}" style="border-left-color:${s.color}" title="${esc(s.title)}" ${s.schools.length ? '' : 'disabled'}>
-      <span>${esc(s.hazardLabel)}<br>${esc(s.zoneShort)}</span><strong>${s.schools.length}</strong>
+      <span>${esc(s.title)}</span><strong>${s.schools.length}</strong>
     </button>`).join('');
 }
 

@@ -1,6 +1,6 @@
 import { state } from './state.js';
 import { VOLCANO_META } from './config.js';
-import { STALTA_THRESHOLD } from './charts.js';
+import { STALTA_THRESHOLD, isRecorded } from './charts.js';
 import { updateTrendChart, updateRadarChart, updateNavigationButtons } from './charts.js';
 import { updateMapMarkers } from './map.js';
 import { updateLiveFeeds } from './kanlaon-snapshot.js';
@@ -73,32 +73,52 @@ function renderParams() {
     { key: 'STALTA', label: 'STA/LTA', unit: 'ratio' },
   ];
 
+  const blank = v => v === null || v === undefined || v === '' || v === 'None' || v === 'none';
+
   let html = '';
   let found = 0;
 
+  // A parameter is listed when the volcano has ever reported it, so a zero
+  // reading shows as 0 and a day without a report shows as —.
   for (const p of params) {
+    if (!isRecorded(state.currentVolcano, p.key)) continue;
     const val = latest[p.key];
-    if (val !== null && val !== undefined && val !== '' && val !== 'None' && val !== 'none' && val !== 0 && val !== '0') {
-      let display = val;
-      if (typeof val === 'string') {
-        const num = parseFloat(val);
-        if (!isNaN(num) && num !== 0) display = Math.round(num * 100) / 100;
-      } else if (typeof val === 'number') {
-        display = Math.round(val * 100) / 100;
-      }
-      html += `
-        <div class="param-item">
-          <div>
-            <div style="font-size:14px;color:var(--text2);text-transform:uppercase">${p.label}</div>
-            <div style="font-size:12px;color:var(--text3);margin-top:0.2rem">${p.unit}</div>
-          </div>
-          <div class="param-value">${display}</div>
-        </div>`;
-      found++;
+    let display = '—';
+    if (!blank(val)) {
+      const num = parseFloat(val);
+      display = isNaN(num) ? val : Math.round(num * 100) / 100;
     }
+    html += `
+      <div class="param-item">
+        <div>
+          <div style="font-size:14px;color:var(--text2);text-transform:uppercase">${p.label}</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:0.2rem">${p.unit}</div>
+        </div>
+        <div class="param-value">${display}</div>
+      </div>`;
+    found++;
   }
   container.innerHTML = found === 0 ? '<div class="error">⚠️ No active parameters</div>' : html;
+  capParamList(container);
 }
+
+// The panel keeps its four-parameter height; more parameters scroll.
+const PARAMS_VISIBLE = 4;
+function capParamList(container) {
+  container.style.maxHeight = '';
+  container.classList.remove('scrollable');
+  const items = container.querySelectorAll('.param-item');
+  if (items.length <= PARAMS_VISIBLE) return;
+  const padBottom = parseFloat(getComputedStyle(container).paddingBottom);
+  const height = items[PARAMS_VISIBLE].getBoundingClientRect().top - container.getBoundingClientRect().top + padBottom;
+  if (height <= padBottom) return; // not laid out (panel hidden)
+  container.style.maxHeight = `${height}px`;
+  container.classList.add('scrollable');
+}
+window.addEventListener('resize', () => {
+  const container = document.getElementById('param-list');
+  if (container) capParamList(container);
+});
 
 export function selectVol(vol) {
   state.currentVolcano = vol;
